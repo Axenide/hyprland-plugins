@@ -145,6 +145,7 @@ void CHyprBar::handleDownEvent(SCallbackInfo& info, std::optional<ITouch::SDownE
     static auto* const PBARBUTTONPADDING = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:hyprbars:bar_button_padding")->getDataStaticPtr();
     static auto* const PBARPADDING       = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:hyprbars:bar_padding")->getDataStaticPtr();
     static auto* const PALIGNBUTTONS     = (Hyprlang::STRING const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:hyprbars:bar_buttons_alignment")->getDataStaticPtr();
+    static auto* const PBUTTONROUNDNESS  = (Hyprlang::INT* const*)HyprlandAPI::getConfigValue(PHANDLE, "plugin:hyprbars:button_roundness")->getDataStaticPtr();
 
     const bool         BUTTONSRIGHT = std::string{*PALIGNBUTTONS} != "left";
 
@@ -418,7 +419,26 @@ void CHyprBar::renderBarButtons(const Vector2D& bufferSize, const float scale) {
         const auto  pos = Vector2D{BUTTONSRIGHT ? bufferSize.x - offset - scaledButtonSize / 2.0 : offset + scaledButtonSize / 2.0, bufferSize.y / 2.0}.floor();
 
         cairo_set_source_rgba(CAIRO, button.bgcol.r, button.bgcol.g, button.bgcol.b, button.bgcol.a);
-        cairo_arc(CAIRO, pos.x, pos.y, scaledButtonSize / 2, 0, 2 * M_PI);
+
+        const double roundness = **PBUTTONROUNDNESS * scale;
+        double       x         = pos.x - scaledButtonSize / 2.0;
+        double       y         = pos.y - scaledButtonSize / 2.0;
+        double       w         = scaledButtonSize;
+        double       h         = scaledButtonSize;
+
+        // Ensure roundness is not more than half the smallest dimension
+        double r = roundness;
+        if (r > w / 2)
+            r = w / 2;
+        if (r > h / 2)
+            r = h / 2;
+
+        cairo_new_sub_path(CAIRO);
+        cairo_arc(CAIRO, x + r, y + r, r, M_PI, 3 * M_PI / 2);
+        cairo_arc(CAIRO, x + w - r, y + r, r, 3 * M_PI / 2, 2 * M_PI);
+        cairo_arc(CAIRO, x + w - r, y + h - r, r, 0, M_PI / 2);
+        cairo_arc(CAIRO, x + r, y + h - r, r, M_PI / 2, M_PI);
+        cairo_close_path(CAIRO);
         cairo_fill(CAIRO);
 
         offset += scaledButtonsPad + scaledButtonSize;
